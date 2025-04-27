@@ -151,10 +151,10 @@ lưu ý: chọn đúng checkpoint trước khi chạy lệnh
 # 8. Liên hệ
 - sinh viên thực hiện đồ án
 * Nguyễn Việt Linh (vietlinh357@gmail.com, 2115230@dlu.edu.vn)
-* Nguyễn Thọ Thành (2115269@dlu.edu.vn)
+* Nguyễn Thọ Thành (2115269@dlu.edu.vn, https://c1nnamon397.crd.co/)
 * Nguyễn Dương Công Bảo (2115288@dlu.edu.vn)
 
--GVHD
+- GVHD
 * tahoangthang@gmail.com
 * https://www.tahoangthang.com
 
