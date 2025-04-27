@@ -6,11 +6,15 @@ GVHD: ts. Tạ Hoàng Thắng    email: tahoangthang@gmail.com
 
 # 2. Bước thu thập dữ liệu
 Thu thập dữ liệu ngẫu nhiên bằng lệnh sau trên terminal:
+
     python collect_data.py
+
 dữ liệu sẽ được thu thập bằng wikidata api theo id item ngẫu nhiên
 # 3. Bước lọc các dữ liệu tên riêng
 Chạy lệnh:
-    python filtered.py 
+
+    python filtered.py
+
 lọc những dữ liệu có nhãn tiếng anh và tiếng việt trùng lập với nhau.
 
 # 4. chia tập dữ liệu
@@ -20,8 +24,10 @@ Tập dữ liệu sẽ được chia ngẫu nhiên theo tỉ lệ 8:1:1, bởi l
 
 # 5. Phân tích tập dữ liệu
 Lệnh
+
     python analyze_data.py 
-Phân tích các thông số:
+
+phân tích các tham số
 * Độ dài nguồn, độ dài đích (token, spacy)
 * số lượng từ ngữ tiếng việt và tiếng anh
 * phân loại nhãn theo chủ đề
@@ -56,59 +62,66 @@ Danh sách tham số:
 ### lệnh chạy huấn luyện/ test mô hình
 #### google-t5/t5-small
 ##### với tiền tố
-python seq2seq.py --mode "train" --model_name "google-t5/t5-small" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target_encoded"
 
-python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "google-t5_t5-small\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
+    python seq2seq.py --mode "train" --model_name "google-t5/t5-small" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target_encoded"
+
+    python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "google-t5_t5-small\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
 
 ##### Không tiền tố
-python seq2seq.py --mode "train" --model_name "google-t5/t5-small" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
 
-python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "google-t5_t5-small\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
+    python seq2seq.py --mode "train" --model_name "google-t5/t5-small" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
+
+    python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "google-t5_t5-small\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
 
 
 #### google-t5/t5-base
 ##### có tiền tố
-python seq2seq.py --mode "train" --model_name "google-t5/t5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target_encoded"
 
-python seq2seq.py --mode "test" --model_name "google-t5/t5-base" --model_path "google-t5_t5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
+    python seq2seq.py --mode "train" --model_name "google-t5/t5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target_encoded"
+
+    python seq2seq.py --mode "test" --model_name "google-t5/t5-base" --model_path "google-t5_t5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
 
 ##### Không tiền tố
-python seq2seq.py --mode "train" --model_name "google-t5/t5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
 
-python seq2seq.py --mode "test" --model_name "google-t5/t5-base" --model_path "google-t5_t5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
+    python seq2seq.py --mode "train" --model_name "google-t5/t5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
+
+    python seq2seq.py --mode "test" --model_name "google-t5/t5-base" --model_path "google-t5_t5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
 
 #### facebook/bart-base
-python seq2seq.py --mode "train" --model_name "facebook/bart-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
 
-python seq2seq.py --mode "test" --model_name "facebook/bart-base" --model_path "facebook_bart-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
+    python seq2seq.py --mode "train" --model_name "facebook/bart-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target_encoded"
+
+    python seq2seq.py --mode "test" --model_name "facebook/bart-base" --model_path "facebook_bart-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target" --decode_pred 1
 
 #### Helsinki-NLP/opus-mt-en-vi
-python seq2seq.py --mode "train" --model_name "Helsinki-NLP/opus-mt-en-vi" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
 
-python seq2seq.py --mode "test" --model_name "Helsinki-NLP/opus-mt-en-vi" --model_path "opus-mt-en-vi\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "train" --model_name "Helsinki-NLP/opus-mt-en-vi" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
+
+    python seq2seq.py --mode "test" --model_name "Helsinki-NLP/opus-mt-en-vi" --model_path "opus-mt-en-vi\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
  
 #### VietAI/envit5-translation
 
-python seq2seq.py --mode "train" --model_name "VietAI/envit5-translation" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "train" --model_name "VietAI/envit5-translation" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
 
-python seq2seq.py --mode "test" --model_name "VietAI/envit5-translation" --model_path "envit5-translation\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "test" --model_name "VietAI/envit5-translation" --model_path "envit5-translation\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
 
 #### facebook/m2m100_418M
-python seq2seq.py --mode "train" --model_name "facebook/m2m100_418M" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
 
-python seq2seq.py --mode "test" --model_name "facebook/m2m100_418M" --model_path "m2m100_418M\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "train" --model_name "facebook/m2m100_418M" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
+
+    python seq2seq.py --mode "test" --model_name "facebook/m2m100_418M" --model_path "m2m100_418M\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
 
 #### facebook/mbart-large-50 (bad results)
 
-python seq2seq.py --mode "train" --model_name "facebook/mbart-large-50" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "train" --model_name "facebook/mbart-large-50" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "" --source_column "source" --target_column "target"
 
-python seq2seq.py --mode "test" --model_name "facebook/mbart-large-50" --model_path "google_mt5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
+    python seq2seq.py --mode "test" --model_name "facebook/mbart-large-50" --model_path "google_mt5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "" --source_column "source" --target_column "target"
 
 #### google/mt5-base (worst results)
 
-python seq2seq.py --mode "train" --model_name "google/mt5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target"
+    python seq2seq.py --mode "train" --model_name "google/mt5-base" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target"
 
-python seq2seq.py --mode "test" --model_name "google/mt5-base" --model_path "google_mt5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "summarize: " --source_column "source" --target_column "target"
+    python seq2seq.py --mode "test" --model_name "google/mt5-base" --model_path "google_mt5-base\checkpoint-xxx" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "summarize: " --source_column "source" --target_column "target"
 
 * Lưu ý: đổi checkpoint phù hợp với mô hình để test
 * Lưu ý 2: nếu có sử dụng máy dùng GPU của nvidia, nên cài đặt phiên bản pytorch phù hợp với phiên bản cuda của bạn: 
@@ -121,16 +134,17 @@ python seq2seq.py --mode "test" --model_name "google/mt5-base" --model_path "goo
 # 7. Phân tích và lọc kết quả 
 ## 7a. lọc kết quả
 lọc ra danh sách câu nguồn và câu dự đoán bằng lệnh
+
     python filt.py
 ## 7b. phân tích kết quả
+
     python analyze.py
 * phân tích, so sánh metric
 * tỉ lệ chính sát của mô hình
 * các lỗi phổ biến
 ## 7c. giao diện dịch thuật
-chạy lệnh: 
     python ui.py
-để hiển thị giao diện ứng dụng dịch nhãn từ tiếng anh sang tiếng việt, có thể chọn qua lại các model để kiểm tra và so sánh chất lượng dịch thuật
+* để hiển thị giao diện ứng dụng dịch nhãn từ tiếng anh sang tiếng việt, có thể chọn qua lại các model để kiểm tra và so sánh chất lượng dịch thuật
 
 lưu ý: chọn đúng checkpoint trước khi chạy lệnh
 
