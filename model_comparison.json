@@ -1,0 +1,17 @@
+[
+    {
+        "model": "Helsinki-NLP/opus-mt-en-vi",
+        "flops_gflops": 5.850722304,
+        "avg_epoch_time": 30.721809176036288
+    },
+    {
+        "model": "google-t5/t5-base",
+        "flops_gflops": 21.57944832,
+        "avg_epoch_time": 52.09877734865461
+    },
+    {
+        "model": "facebook/bart-base",
+        "flops_gflops": 13.316308992,
+        "avg_epoch_time": 35.45273674556187
+    }
+]

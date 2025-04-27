@@ -10,9 +10,12 @@ import pandas as pd
 import random
 import re
 import torch
-
+import time
+from transformers import TrainerCallback
+import torchprofile
 from prettytable import PrettyTable
-
+from ptflops import get_model_complexity_info
+import json
 from datasets import Dataset, load_dataset, concatenate_datasets
 from file_io import *
 from huggingface_hub import HfFolder
@@ -29,6 +32,84 @@ print('CUDA: ', torch.cuda.is_available())
 bleu = evaluate.load("bleu")
 meteor = evaluate.load("meteor")
 rouge = evaluate.load("rouge")
+
+def calculate_flops(model, tokenizer, max_source_length, max_target_length, model_name, repository_id):
+    try:
+        # Đảm bảo mô hình ở đúng thiết bị
+        model = model.to(device)
+        
+        # Tính FLOPS bằng ptflops
+        # Đầu vào là kích thước (batch_size, sequence_length) cho encoder và decoder
+        flops, params = get_model_complexity_info(
+            model,
+            input_res=(1, max_source_length),  # Batch size = 1, seq_len = max_source_length
+            as_strings=False,
+            input_constructor=lambda size: {
+                "input_ids": torch.ones(size, dtype=torch.long).to(device),
+                "attention_mask": torch.ones(size, dtype=torch.long).to(device),
+                "decoder_input_ids": torch.ones((size[0], max_target_length), dtype=torch.long).to(device),
+                "decoder_attention_mask": torch.ones((size[0], max_target_length), dtype=torch.long).to(device)
+            }
+        )
+        
+        # FLOPS huấn luyện = 3 * FLOPS forward (forward + backward)
+        flops_train = flops * 3
+        flops_gflops = flops_train / 1e9
+        
+        print(f"🔢 FLOPs (Training, per step): {flops_gflops:.2f} GFLOPs")
+        
+        # Lưu FLOPS vào file
+        flop_log_path = f"{repository_id}/flops_info.json"
+        with open(flop_log_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "model": model_name,
+                "flops_gflops": flops_gflops,
+                "params": params
+            }, f, indent=4)
+        
+        return flops_gflops
+    
+    except Exception as e:
+        print(f"Error calculating FLOPS for {model_name}: {str(e)}")
+        # Fallback: Ước lượng FLOPS dựa trên số tham số
+        params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        # Ước lượng: FLOPS ≈ 6 * N * S (N: tham số, S: độ dài chuỗi)
+        flops_gflops = 6 * params * max_source_length / 1e9
+        print(f"🔢 Estimated FLOPs (Training, per step): {flops_gflops:.2f} GFLOPs")
+        
+        # Lưu FLOPS ước lượng
+        flop_log_path = f"{repository_id}/flops_info.json"
+        with open(flop_log_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "model": model_name,
+                "flops_gflops": flops_gflops,
+                "params": params,
+                "estimated": True
+            }, f, indent=4)
+        
+    return flops_gflops
+
+def update_model_comparison(model_name, flops_gflops, avg_epoch_time):
+    comparison_file = "model_comparison.json"
+    comparison_data = []
+    
+    # Đọc dữ liệu hiện có
+    if os.path.exists(comparison_file):
+        with open(comparison_file, "r", encoding="utf-8") as f:
+            comparison_data = json.load(f)
+    
+    # Cập nhật hoặc thêm mới
+    model_data = {
+        "model": model_name,
+        "flops_gflops": flops_gflops,
+        "avg_epoch_time": avg_epoch_time
+    }
+    comparison_data = [d for d in comparison_data if d["model"] != model_name]  # Xóa dữ liệu cũ của mô hình
+    comparison_data.append(model_data)
+    
+    # Lưu lại
+    with open(comparison_file, "w", encoding="utf-8") as f:
+        json.dump(comparison_data, f, indent=4)
 
 def preprocess_function(sample, padding="max_length"):
     
@@ -196,7 +277,18 @@ def train(train_set, val_set, test_set, tokenizer, model, model_name = 'facebook
         #hub_model_name=repository_id,
         #hub_token=HfFolder.get_token(),
         )
+    class TimeRecorderCallback(TrainerCallback):
+        def __init__(self):
+            self.epoch_times = []
 
+        def on_epoch_begin(self, args, state, control, **kwargs):
+            self._start_time = time.time()
+
+        def on_epoch_end(self, args, state, control, **kwargs):
+            elapsed = time.time() - self._start_time
+            print(f"⏱️ Thời gian epoch {state.epoch}: {elapsed:.2f} giây")
+            self.epoch_times.append(elapsed)
+    time_callback = TimeRecorderCallback()
     # Create Trainer instance
     trainer = Seq2SeqTrainer(
         model=model,
@@ -205,10 +297,69 @@ def train(train_set, val_set, test_set, tokenizer, model, model_name = 'facebook
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_val_dataset,
         compute_metrics=compute_metrics,
+        callbacks=[time_callback], 
         )
+    
+    from transformers import AutoTokenizer
+
+    # Tạo input mẫu đúng cấu trúc
+    sample_text = source_prefix + "Sample sentence for profiling"
+    sample_inputs = tokenizer(sample_text, return_tensors="pt", padding=True, truncation=True, max_length=max_source_length).to(device)
+
+    '''
+    # Lấy FLOPs đúng cách (chỉ tính input_ids)
+    flops = torchprofile.profile_macs(model, sample_inputs["input_ids"])
+    flops_gflops = flops / 1e9
+    print(f"🔢 FLOPs: {flops_gflops:.2f} GFLOPs")
+    # Ghi FLOPs vào file riêng để sau dùng cho vẽ biểu đồ
+    flop_log_path = f"{repository_id}/flops_info.json"
+    with open(flop_log_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "model": model_name,
+            "flops_gflops": flops_gflops
+    }, f, indent=4)'''
+
+    flops_gflops = calculate_flops(model, tokenizer, max_source_length, max_target_length, model_name, repository_id)
 
     trainer.train()
     trainer.evaluate()
+    
+    avg_epoch_time = sum(time_callback.epoch_times) / len(time_callback.epoch_times) if time_callback.epoch_times else 0
+    
+    # Lưu thông tin so sánh cho biểu đồ sau này
+    update_model_comparison(model_name, flops_gflops, avg_epoch_time)
+    
+    # Vẽ biểu đồ Training Time vs FLOPS cho mô hình hiện tại
+    plt.figure(figsize=(8, 6))
+    plt.scatter([flops_gflops], [avg_epoch_time], s=100, c="blue", label=model_name)
+    plt.annotate(model_name, (flops_gflops, avg_epoch_time), xytext=(5, 5), textcoords="offset points")
+    plt.xlabel("FLOPs per Step (GFLOPs)")
+    plt.ylabel("Average Epoch Time (Seconds)")
+    plt.title(f"Training Time vs FLOPS ({model_name})")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"{repository_id}/training_time_vs_flops.png")
+    plt.show()
+    
+    plt.figure(figsize=(8, 4))
+    plt.plot(range(1, len(time_callback.epoch_times)+1), time_callback.epoch_times, marker='o')
+    plt.title("🕒 Thời gian huấn luyện mỗi epoch")
+    plt.xlabel("Epoch")
+    plt.ylabel("Thời gian (giây)")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"{repository_id}/training_time_plot.png")
+    plt.show()
+
+    # Ghi FLOPS và thời gian vào file
+    with open(f"{repository_id}/training_info.txt", "w", encoding="utf-8") as f:
+        f.write(f"FLOPs (Training, per step): {flops_gflops:.2f} GFLOPs\n")
+        f.write("Epoch times (s):\n")
+        for i, t in enumerate(time_callback.epoch_times, 1):
+            f.write(f"Epoch {i}: {t:.2f}s\n")
+        f.write(f"Average Epoch Time: {avg_epoch_time:.2f}s\n")
+
 
 def count_parameters(model):
     table = PrettyTable(["Modules", "Parameters"])
@@ -268,6 +419,7 @@ def test(dataset, model_name, model, tokenizer, input_file = 'dataset/test.json'
     if (decode_pred == True):
         pred_list = [decode_vi(pred) for pred in pred_list]
     
+    
     # Use simple post-processing
     decoded_preds, decoded_labels = postprocess_text(pred_list, label_list)
     
@@ -280,6 +432,9 @@ def test(dataset, model_name, model, tokenizer, input_file = 'dataset/test.json'
     
     meteor_result = meteor.compute(predictions=decoded_preds, references=decoded_labels)
     print('meteor_result: ', meteor_result['meteor'])
+    
+    
+
     
     result = {}
     result["rouge1"] = rouge_result['rouge1']
@@ -336,18 +491,18 @@ def main(args):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Training Parameter')
-    parser.add_argument('--mode', type=str, default='test') # or test
+    parser.add_argument('--mode', type=str, default='train') # or test
     parser.add_argument('--model_name', type=str, default='facebook/bart-base') # or test
     parser.add_argument('--train_path', type=str, default='dataset/train.json') 
     parser.add_argument('--test_path', type=str, default='dataset/test.json')
     parser.add_argument('--val_path', type=str, default='dataset/val.json')
     parser.add_argument('--epochs', type=int, default=35)
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=8)
     parser.add_argument('--test_batch_size', type=int, default=16)
     parser.add_argument('--max_source_length', type=int, default=32)
     parser.add_argument('--max_target_length', type=int, default=32)
     parser.add_argument('--min_target_length', type=int, default=1)
-    parser.add_argument('--model_path', type=str, default='bart-base\checkpoint-2700')
+    parser.add_argument('--model_path', type=str, default='bart-base\checkpoint-2550')
     parser.add_argument('--source_prefix', type=str, default='summarize: ') # only for T5 models
     parser.add_argument('--source_column', type=str, default='source') 
     parser.add_argument('--target_column', type=str, default='target') 
@@ -392,4 +547,4 @@ if __name__ == "__main__":
 
 # python seq2seq.py --mode "train" --model_name "google-t5/t5-small" --train_path "dataset/train.json" --val_path "dataset/val.json" --test_path "dataset/test.json" --epochs 3 --batch_size 4 --max_source_length 32 --source_prefix "summarize: " --source_column "source" --target_column "target_encoded"   
      
-# python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "t5-small\checkpoint-2250" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "summarize: " --source_column "source" --target_column "target" --decode_pred 1
+# python seq2seq.py --mode "test" --model_name "google-t5/t5-small" --model_path "t5-small\checkpoint-2250" --test_path "dataset/test.json" --test_batch_size 4 --max_source_length 32 --min_target_length 1 --source_prefix "summarize: " --source_column "source" --target_column "target" --decode_pred 1 
